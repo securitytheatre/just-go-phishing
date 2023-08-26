@@ -1,0 +1,130 @@
+--- phish.go	2023-08-21 02:30:19.200226250 +0000
++++ phish.go	2023-08-21 02:41:14.900259274 +0000
+@@ -1,10 +1,12 @@
+ package controllers
+ 
+ import (
++	"bytes"
+ 	"compress/gzip"
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"html/template"
+ 	"net"
+ 	"net/http"
+ 	"strings"
+@@ -81,6 +83,35 @@
+ 	}
+ }
+ 
++// Overwrite net.https Error with a custom one to set our own headers
++// Go's internal Error func returns text/plain so browser's won't render the html
++func customError(w http.ResponseWriter, error string, code int) {
++        w.Header().Set("Server", "Apache/2.4.1 (Unix)")
++        w.Header().Set("Content-Type", "text/html; charset=utf-8")
++        w.Header().Set("X-Content-Type-Options", "nosniff")
++        w.Header().Set("X-XSS-Protection", "1; mode=block")
++        w.Header().Set("X-Frame-Options", "SAMEORIGIN")
++        w.Header().Set("Content-Security-Policy", "default-src https:")
++        w.WriteHeader(code)
++        fmt.Fprintln(w, error)
++}
++// Overwrite go's internal not found to allow templating the not found page
++// The templating string is currently not passed in, therefore there is no templating yet
++// If I need it in the future, it's a 5 minute change...
++func customNotFound(w http.ResponseWriter, r *http.Request) {
++	tmpl404, err := template.ParseFiles("templates/404.html")
++	if err != nil {
++		log.Fatal(err)
++	}
++	var b bytes.Buffer
++	err = tmpl404.Execute(&b, "")
++	if err != nil {
++		http.NotFound(w, r)
++		return
++	}
++	customError(w, b.String(), http.StatusNotFound)
++}
++
+ // Start launches the phishing server, listening on the configured address.
+ func (ps *PhishingServer) Start() {
+ 	if ps.config.UseTLS {
+@@ -138,7 +169,7 @@
+ 		if err != ErrInvalidRequest && err != ErrCampaignComplete {
+ 			log.Error(err)
+ 		}
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 		return
+ 	}
+ 	// Check for a preview
+@@ -172,7 +203,7 @@
+ 		if err != ErrInvalidRequest && err != ErrCampaignComplete {
+ 			log.Error(err)
+ 		}
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 		return
+ 	}
+ 	// Check for a preview
+@@ -206,7 +237,7 @@
+ 		if err != ErrInvalidRequest && err != ErrCampaignComplete {
+ 			log.Error(err)
+ 		}
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 		return
+ 	}
+ 	w.Header().Set("X-Server", config.ServerName) // Useful for checking if this is a GoPhish server (e.g. for campaign reporting plugins)
+@@ -216,13 +247,13 @@
+ 		ptx, err = models.NewPhishingTemplateContext(&preview, preview.BaseRecipient, preview.RId)
+ 		if err != nil {
+ 			log.Error(err)
+-			http.NotFound(w, r)
++			customNotFound(w, r)
+ 			return
+ 		}
+ 		p, err := models.GetPage(preview.PageId, preview.UserId)
+ 		if err != nil {
+ 			log.Error(err)
+-			http.NotFound(w, r)
++			customNotFound(w, r)
+ 			return
+ 		}
+ 		renderPhishResponse(w, r, ptx, p)
+@@ -242,7 +273,7 @@
+ 	p, err := models.GetPage(c.PageId, c.UserId)
+ 	if err != nil {
+ 		log.Error(err)
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 		return
+ 	}
+ 	switch {
+@@ -260,7 +291,7 @@
+ 	ptx, err = models.NewPhishingTemplateContext(&c, rs.BaseRecipient, rs.RId)
+ 	if err != nil {
+ 		log.Error(err)
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 	}
+ 	renderPhishResponse(w, r, ptx, p)
+ }
+@@ -276,7 +307,7 @@
+ 			redirectURL, err := models.ExecuteTemplate(p.RedirectURL, ptx)
+ 			if err != nil {
+ 				log.Error(err)
+-				http.NotFound(w, r)
++				customNotFound(w, r)
+ 				return
+ 			}
+ 			http.Redirect(w, r, redirectURL, http.StatusFound)
+@@ -287,7 +318,7 @@
+ 	html, err := models.ExecuteTemplate(p.HTML, ptx)
+ 	if err != nil {
+ 		log.Error(err)
+-		http.NotFound(w, r)
++		customNotFound(w, r)
+ 		return
+ 	}
+ 	w.Write([]byte(html))
