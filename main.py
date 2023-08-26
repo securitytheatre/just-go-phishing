@@ -18,6 +18,8 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import logging
+import argparse
+import sys
 import os
 import subprocess
 from typing import List
@@ -228,25 +230,49 @@ def run_gophish_container():
     except docker.errors.APIError as error:
         logger.error("Error running GoPhish container: %s", error)
 
+def parse_args():
+    """
+    Parse command-line arguments for the script.
+
+    Returns:
+        argparse.Namespace: Namespace object containing all the arguments provided by the user.
+    """
+    parser = argparse.ArgumentParser(description="Automated phishing infrastructure deployment made easy.")
+    parser.add_argument("--clean", action="store_true", help="Clean the Docker environment")
+    parser.add_argument("--generate-certs", action="store_true", help="Generate SSL certificates")
+    parser.add_argument("--build", choices=['build', 'app'], help="Build a GoPhish Docker image. Targets: 'build' or 'app'")
+    parser.add_argument("--run", action="store_true", help="Run the GoPhish Docker container")
+    args = parser.parse_args()
+
+    # Check if no arguments were provided
+    if not any(vars(args).values()):
+        parser.print_help()
+        exit(0)
+
+    return args
+
 if __name__ == "__main__":
+    arg = parse_args()
+
     # Check if required libraries are installed
     missing_libraries = check_dependencies_installed()
     if missing_libraries:
         logger.error("The following libraries are missing: %s", ', '.join(missing_libraries))
-        exit(1)
-
+        sys.exit()
     # Check if Docker is installed
     if not check_docker_installed():
         logger.error("Docker is not installed")
-        exit(1)
-
+        sys.exit()
     # Check if Docker daemon is running
     if not check_docker_running():
         logger.error("Docker daemon is not running")
-        exit(1)
+        sys.exit()
 
-    #clean_environment()
-    generate_certificates()
-    build_gophish_image("docker/.", "build")
-    build_gophish_image("docker/.", "app")
-    run_gophish_container()
+    if arg.clean:
+        clean_environment()
+    if arg.generate_cert:
+        generate_certificates()
+    if arg.build:
+        build_gophish_image("docker/.", arg.build)
+    if arg.run:
+        run_gophish_container()
