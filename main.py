@@ -270,7 +270,7 @@ if __name__ == "__main__":
 
     if arg.clean:
         clean_environment()
-    if arg.generate_cert:
+    if arg.generate_certs:
         generate_certificates()
     if arg.build:
         build_gophish_image("docker/.", arg.build)
