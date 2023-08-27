@@ -1,5 +1,5 @@
 """
-log.py: Logging utility functions for Python
+log.py: Logging functions for just-go-phishing
 
 Copyright (C) github.com/securitytheatre
 
