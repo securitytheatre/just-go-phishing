@@ -27,6 +27,7 @@ def configure_logging():
     Returns:
         logger: A configured logger instance for use in the main entry point.
     """
-    coloredlogs.install(level='INFO', fmt='%(asctime)s %(hostname)s %(name)s[%(process)d] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s')
+    coloredlogs.install(level='INFO', 
+                        fmt='%(asctime)s %(hostname)s %(name)s[%(process)d] [%(filename)s:%(lineno)d] [%(levelname)s] - %(message)s')
     logger = logging.getLogger(__name__)
     return logger

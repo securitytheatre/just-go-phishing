@@ -17,14 +17,14 @@ You should have received a copy of the GNU Affero General Public License along w
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import argparse
 import sys
 import os
 import subprocess
 import docker
 
-from src import utils
 from src import log
+from src import menu
+from src import utils
 
 DOMAIN = "domain.com"
 EMAIL_ADDRESS = f"no-reply@{DOMAIN}"
@@ -188,12 +188,7 @@ if __name__ == "__main__":
         logger.error("Docker daemon is not running")
         sys.exit()
 
-    parser = argparse.ArgumentParser(description="Phishing infrastructure deployment made easy.")
-    parser.add_argument("--version", action="version", version="just-go-phishing 0.2.0", help="Show the version number and exit")
-    parser.add_argument("--clean", action="store_true", help="Clean the Docker environment")
-    parser.add_argument("--generate-certs", action="store_true", help="Generate SSL certificates")
-    parser.add_argument("--build", choices=['build', 'app'], help="Build a GoPhish Docker image. Targets: 'build' or 'app'")
-    parser.add_argument("--run", action="store_true", help="Run the GoPhish Docker container")
+    parser = menu.build_parser()
     args = parser.parse_args()
 
     # Check if no arguments were provided
