@@ -1,5 +1,5 @@
 """
-just-go-phishing: Automated phishing infrastructure deployment made easy.
+just-go-phishing: Phishing infrastructure deployment made easy.
 
 Copyright (C) github.com/securitytheatre
 
@@ -17,78 +17,18 @@ You should have received a copy of the GNU Affero General Public License along w
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import logging
 import argparse
 import sys
 import os
 import subprocess
-from typing import List
 import docker
+
+from src import utils
+from src import log
 
 DOMAIN = "domain.com"
 EMAIL_ADDRESS = f"no-reply@{DOMAIN}"
 CERTIFICATE_PATH = "certificates"
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
-
-# Check if Docker is installed
-def check_docker_installed() -> bool:
-    """
-    Check if Docker is installed
-    Returns:
-        bool: True if Docker is installed, False otherwise
-    """
-    try:
-        subprocess.check_output(["docker", "--version"])
-        return True
-    except FileNotFoundError:
-        return False
-
-# Check if Docker daemon is running
-def check_docker_running() -> bool:
-    """
-    Check if Docker daemon is running
-    Returns:
-        bool: True if Docker daemon is running, False otherwise
-    """
-    try:
-        subprocess.check_output(["docker", "info"])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-# Check if required libraries are installed
-def check_dependencies_installed() -> List[str]:
-    """
-    Check if required libraries are installed
-    Returns:
-        List[str]: List of missing libraries
-    """
-    required_libraries = ["docker"]
-    unavailable_libraries = []
-    for library in required_libraries:
-        try:
-            __import__(library)
-        except ImportError:
-            unavailable_libraries.append(library)
-    return unavailable_libraries
-
-def clean_environment():
-    """
-    Clean the Docker environment by removing unused images, containers, and builders
-    """
-    logger.info("Cleaning environment...")
-    try:
-        subprocess.run(["docker", "image", "prune", "--all", "--force"], check=True)
-        subprocess.run(["docker", "container", "prune", "--force"], check=True)
-        subprocess.run(["docker", "builder", "prune", "--all", "--force"], check=True)
-        subprocess.run(["sudo", "rm", "-rf", "certificates", "assets"], check=True)
-    except subprocess.CalledProcessError as error:
-        logger.error("Error cleaning environment: %s", error)
-    else:
-        logger.info("Done cleaning environment.")
 
 def change_ownership(path: str):
     """
@@ -230,14 +170,26 @@ def run_gophish_container():
     except docker.errors.APIError as error:
         logger.error("Error running GoPhish container: %s", error)
 
-def parse_args():
-    """
-    Parse command-line arguments for the script.
+if __name__ == "__main__":
+    logger = log.configure_logging()
 
-    Returns:
-        argparse.Namespace: Namespace object containing all the arguments provided by the user.
-    """
-    parser = argparse.ArgumentParser(description="Automated phishing infrastructure deployment made easy.")
+    # Check if required libraries are installed
+    required_libraries = utils.read_requirements_txt("requirements.txt")
+    missing_libraries = list(utils.check_libraries_installed(required_libraries))
+    if missing_libraries:
+        logger.error("The following libraries are missing: %s", ', '.join(missing_libraries))
+        sys.exit()
+    # Check if Docker is installed
+    if not utils.check_docker_installed():
+        logger.error("Docker is not installed")
+        sys.exit()
+    # Check if Docker daemon is running
+    if not utils.check_docker_running():
+        logger.error("Docker daemon is not running")
+        sys.exit()
+
+    parser = argparse.ArgumentParser(description="Phishing infrastructure deployment made easy.")
+    parser.add_argument("--version", action="version", version="just-go-phishing 0.2.0", help="Show the version number and exit")
     parser.add_argument("--clean", action="store_true", help="Clean the Docker environment")
     parser.add_argument("--generate-certs", action="store_true", help="Generate SSL certificates")
     parser.add_argument("--build", choices=['build', 'app'], help="Build a GoPhish Docker image. Targets: 'build' or 'app'")
@@ -247,32 +199,12 @@ def parse_args():
     # Check if no arguments were provided
     if not any(vars(args).values()):
         parser.print_help()
-        exit(0)
-
-    return args
-
-if __name__ == "__main__":
-    arg = parse_args()
-
-    # Check if required libraries are installed
-    missing_libraries = check_dependencies_installed()
-    if missing_libraries:
-        logger.error("The following libraries are missing: %s", ', '.join(missing_libraries))
         sys.exit()
-    # Check if Docker is installed
-    if not check_docker_installed():
-        logger.error("Docker is not installed")
-        sys.exit()
-    # Check if Docker daemon is running
-    if not check_docker_running():
-        logger.error("Docker daemon is not running")
-        sys.exit()
-
-    if arg.clean:
-        clean_environment()
-    if arg.generate_certs:
+    if args.clean:
+        utils.clean_docker_environment()
+    if args.generate_certs:
         generate_certificates()
-    if arg.build:
-        build_gophish_image("docker/.", arg.build)
-    if arg.run:
+    if args.build:
+        build_gophish_image("docker/.", args.build)
+    if args.run:
         run_gophish_container()
