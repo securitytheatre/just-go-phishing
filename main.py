@@ -66,7 +66,7 @@ def generate_certificates():
             command=[
                 f"--email={EMAIL_ADDRESS}",
                 f"--domains={DOMAIN}",
-                f"--path=/{EMAIL_ADDRESS}",
+                f"--path=/{CERTIFICATE_PATH}",
                 "--accept-tos",
                 "--http",
                 "run"
