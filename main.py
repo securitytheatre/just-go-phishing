@@ -174,11 +174,7 @@ if __name__ == "__main__":
     logger = log.configure_logging()
 
     # Check if required libraries are installed
-    required_libraries = utils.read_requirements_txt("requirements.txt")
-    missing_libraries = list(utils.check_libraries_installed(required_libraries))
-    if missing_libraries:
-        logger.error("The following libraries are missing: %s", ', '.join(missing_libraries))
-        sys.exit()
+    utils.validate_requirements("requirements.txt")
     # Check if Docker is installed
     if not utils.check_docker_installed():
         logger.error("Docker is not installed")

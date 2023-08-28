@@ -18,6 +18,7 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import subprocess
+import sys
 from pathlib import Path
 from typing import Tuple, Iterable
 from typing import Optional
@@ -59,6 +60,22 @@ def check_libraries_installed(required_libraries: Tuple[str]) -> Iterable[str]:
             __import__(library)
         except ImportError:
             yield library
+
+
+def validate_requirements(requirements_path: Path):
+    """
+    Validate if all required libraries specified in a requirements.txt file are installed.
+    Args:
+        requirements_path (Path): The path to the requirements.txt file
+        logger (logging.Logger): Logger object for logging errors
+    """
+    # Check if required libraries are installed
+    required_libraries = read_requirements_txt(requirements_path)
+    missing_libraries = list(check_libraries_installed(required_libraries))
+
+    if missing_libraries:
+        logger.error("The following libraries are missing: %s", ', '.join(missing_libraries))
+        sys.exit()
 
 
 def get_docker_client() -> Optional[docker.DockerClient]:
