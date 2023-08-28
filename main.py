@@ -48,7 +48,7 @@ def generate_certificates():
     """
     Generate SSL certificates using Let's Encrypt
     """
-    client = docker.from_env()
+    client = utils.get_docker_client()
 
     # Pull the LEGO_IMAGE from Docker Hub
     logger.info("Pulling goacme/lego:latest image...")
@@ -93,7 +93,7 @@ def build_gophish_image(path: str, target: str):
         PATH (str): The path to the Dockerfile
         TARGET (str): The target to build
     """
-    client = docker.from_env()
+    client = utils.get_docker_client()
 
     logger.info("Building Docker image with Dockerfile %s and target %s...", path, target)
     try:
@@ -113,7 +113,7 @@ def run_gophish_container():
     """
     Run the GoPhish Docker container
     """
-    client = docker.from_env()
+    client = utils.get_docker_client()
 
     # Set variables for GoPhish container
     admin_listen_url = "0.0.0.0:3333"
