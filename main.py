@@ -127,19 +127,34 @@ def run_gophish_container():
     except docker.errors.APIError as error:
         logger.error("Error running GoPhish container: %s", error)
 
-if __name__ == "__main__":
-    logger = log.configure_logging()
 
+def initialise():
+    """
+    Initialise the application by:
+    1. Validating required libraries are installed.
+    2. Checking if Docker is installed.
+    3. Checking if the Docker daemon is running.
+
+    Raises:
+        SystemExit: If any of the checks fail.
+    """
     # Check if required libraries are installed
     utils.validate_requirements("requirements.txt")
+
     # Check if Docker is installed
     if not utils.check_docker_installed():
         logger.error("Docker is not installed")
         sys.exit()
+
     # Check if Docker daemon is running
     if not utils.check_docker_running():
         logger.error("Docker daemon is not running")
         sys.exit()
+
+
+if __name__ == "__main__":
+    logger = log.configure_logging()
+    initialise()
 
     parser = menu.build_parser()
     args = parser.parse_args()
@@ -148,20 +163,24 @@ if __name__ == "__main__":
     if not any(vars(args).values()):
         parser.print_help()
         sys.exit()
+
     if args.sub_command == 'clean':
         if args.containers:
             utils.clean_docker_containers()
         if args.images:
-            utils.clean_docker_images()
+            utils.clean_docker_images(filters = {"dangling": False})
         if args.build_cache:
             utils.clean_docker_build_cache()
         if args.local_folders:
             utils.clean_local_folders(folders = ["certificates", "assets"])
         if args.all:
-            utils.clean_docker_environment(filters = {"dangling": True}, folders = ["certificates", "assets"])
+            utils.clean_docker_environment(filters = {"dangling": False}, folders = ["certificates", "assets"])
+
     if args.generate_certs:
         lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
+
     if args.build:
         build_gophish_image("docker/.", args.build)
+
     if args.run:
         run_gophish_container()
