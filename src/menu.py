@@ -30,7 +30,7 @@ def build_parser():
     parser.add_argument("--version", action="version", version="just-go-phishing 0.2.0", help="Show the version number and exit")
 
     subparsers = parser.add_subparsers(help='Sub-commands for cleaning the Docker environment', dest='sub_command')
-    
+
     clean_parser = subparsers.add_parser('clean',description='The clean sub-command supports various options to clean Docker environment.')
     clean_parser.add_argument('--containers', action='store_true', help='Clean Docker containers')
     clean_parser.add_argument('--images', action='store_true', help='Clean Docker images')

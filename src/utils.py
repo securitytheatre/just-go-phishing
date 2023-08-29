@@ -122,6 +122,30 @@ def check_docker_running() -> bool:
         return False
 
 
+def initialise():
+    """
+    Initialise the application by:
+    1. Validating required libraries are installed.
+    2. Checking if Docker is installed.
+    3. Checking if the Docker daemon is running.
+
+    Raises:
+        SystemExit: If any of the checks fail.
+    """
+    # Check if required libraries are installed
+    validate_requirements("requirements.txt")
+
+    # Check if Docker is installed
+    if not check_docker_installed():
+        logger.error("Docker is not installed")
+        sys.exit()
+
+    # Check if Docker daemon is running
+    if not check_docker_running():
+        logger.error("Docker daemon is not running")
+        sys.exit()
+
+
 def clean_docker_containers():
     """
     Clean unused Docker containers.
