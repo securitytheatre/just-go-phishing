@@ -16,6 +16,7 @@ See the GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License along with just-go-phishing. 
 If not, see <https://www.gnu.org/licenses/>.
 """
+
 import os
 import docker
 from src import log
