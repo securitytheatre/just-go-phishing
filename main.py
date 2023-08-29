@@ -97,15 +97,13 @@ def build_gophish_image(path: str, target: str):
 
     logger.info("Building Docker image with Dockerfile %s and target %s...", path, target)
     try:
-        image, build_log = client.images.build(
+        image, _ = client.images.build(
             path=path,
             rm=True,
             target=target,
             tag=f"{os.getenv('USER')}/gophish-{target}"
         )
         logger.info("Successfully built image: %s", image.tags[0])
-        for log in build_log:
-            print(log)
     except docker.errors.BuildError as error:
         logger.error("Error building Docker image: %s", error)
 
