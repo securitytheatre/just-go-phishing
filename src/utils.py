@@ -17,6 +17,9 @@ You should have received a copy of the GNU Affero General Public License along w
 If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
+import errno
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -219,3 +222,53 @@ def clean_docker_environment(filters=None, folders=None):
     clean_local_folders(folders)
 
     logger.info("Done cleaning environment.")
+
+
+def change_volume_ownership(path: Path, uid: int, gid: int) -> bool:
+    """
+    Change the ownership of all files in the given path to the specified UID and GID.
+
+    Parameters:
+        path (Path): The path of the directory whose ownership needs to be changed.
+        uid (int): User ID for the new owner.
+        gid (int): Group ID for the new owner.
+    
+    Returns:
+        bool: True if the operation was successful, False otherwise.
+    """
+    try:
+        for root, dirs, files in os.walk(path):
+            for name in dirs + files:
+                full_path = Path(root) / name
+                os.chown(full_path, uid, gid)
+        return True
+    except OSError as error:
+        if error.errno == errno.EPERM:
+            logger.error("Permission denied: %s", error)
+        elif error.errno == errno.ENOENT:
+            logger.error("Path not found: %s", error)
+        else:
+            logger.error("An error occurred: %s", error)
+        return False
+
+
+def remove_local_folders(folders: list[Path]):
+    """
+    Remove local directories specified in the 'folders' list.
+    
+    Parameters:
+    - folders (list[Path]): A list of folder paths to remove.
+    
+    Returns:
+    None
+    """
+    try:
+        for folder in folders:
+            if folder.exists():
+                shutil.rmtree(folder)
+    except PermissionError as permission_error:
+        logger.error("Permission denied while trying to remove local folders: %s", permission_error)
+    except OSError as os_error:
+        logger.error("Failed to remove local folders due to an OSError: %s", os_error)
+    else:
+        logger.info("Done cleaning environment.")
