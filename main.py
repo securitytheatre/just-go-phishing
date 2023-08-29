@@ -25,6 +25,7 @@ import docker
 from src import log
 from src import menu
 from src import utils
+from src import lego
 
 DOMAIN = "domain.com"
 EMAIL_ADDRESS = f"no-reply@{DOMAIN}"
@@ -43,48 +44,6 @@ def change_ownership(path: str):
         logger.error("Error changing ownership: %s", error)
     else:
         logger.info("Done changing ownership.")
-
-def generate_certificates():
-    """
-    Generate SSL certificates using Let's Encrypt
-    """
-    client = utils.get_docker_client()
-
-    # Pull the LEGO_IMAGE from Docker Hub
-    logger.info("Pulling goacme/lego:latest image...")
-    try:
-        client.images.pull("goacme/lego:latest")
-    except docker.errors.APIError as error:
-        logger.error("Error pulling image: %s", error)
-        return
-
-    # Run the lego container to generate SSL certificates using Let's Encrypt
-    logger.info("Running lego container...")
-    try:
-        container = client.containers.create(
-            image="goacme/lego",
-            command=[
-                f"--email={EMAIL_ADDRESS}",
-                f"--domains={DOMAIN}",
-                f"--path=/{CERTIFICATE_PATH}",
-                "--accept-tos",
-                "--http",
-                "run"
-            ],
-            volumes={
-                os.path.join(os.getcwd(), f"{CERTIFICATE_PATH}"): {'bind': '/certificates', 'mode': 'rw'},
-            },
-            ports={"80/tcp": 80},
-        )
-        container.start()
-        container.wait()
-        logs = container.logs()
-        logger.info(logs.decode('utf-8'))
-        container.remove()
-        logger.info("Done running lego container.")
-        change_ownership(CERTIFICATE_PATH)
-    except docker.errors.APIError as error:
-        logger.error("Error running lego container: %s", error)
 
 def build_gophish_image(path: str, target: str):
     """
@@ -201,7 +160,7 @@ if __name__ == "__main__":
         if args.all:
             utils.clean_docker_environment(filters = {"dangling": True}, folders = ["certificates", "assets"])
     if args.generate_certs:
-        generate_certificates()
+        lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
     if args.build:
         build_gophish_image("docker/.", args.build)
     if args.run:
