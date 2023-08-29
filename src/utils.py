@@ -108,6 +108,7 @@ def check_docker_running() -> bool:
         bool: True if Docker daemon is running, False otherwise.
     """
     client = get_docker_client()
+
     if client is None:
         return False
 
@@ -118,35 +119,103 @@ def check_docker_running() -> bool:
         return False
 
 
-def clean_docker_environment():
+def clean_docker_containers():
     """
-    Clean the Docker environment by removing unused images, containers, and builders.
+    Clean unused Docker containers.
+
+    Returns:
+    None
     """
-    logger.info("Cleaning environment...")
     client = get_docker_client()
 
-    # Prune unused containers
     try:
         client.containers.prune()
+        logger.info("Successfully cleaned unused Docker containers.")
     except docker.errors.APIError as api_error:
-        logger.error("Failed to prune containers: %s", api_error)
+        logger.error("Failed to clean Docker containers: %s", api_error)
+        raise
 
-    # Prune unused images
+
+def clean_docker_images(filters=None):
+    """
+    Clean unused Docker images based on filters.
+
+    Parameters:
+    filters (dict): Filters for image pruning. Defaults to {"dangling": True}.
+
+    Returns:
+    None
+    """
+    client = get_docker_client()
+
+    if filters is None:
+        filters = {"dangling": True}
+
     try:
-        client.images.prune(filters={"dangling": True})
+        client.images.prune(filters=filters)
+        logger.info("Successfully cleaned Docker images.")
     except docker.errors.APIError as api_error:
-        logger.error("Failed to prune images: %s", api_error)
+        logger.error("Failed to clean Docker images: %s", api_error)
+        raise
 
-    # Prune build cache
+
+def clean_docker_build_cache():
+    """
+    Clean unused Docker build cache.
+
+    Returns:
+    None
+    """
+    client = get_docker_client()
+
     try:
         client.api.prune_builds()
+        logger.info("Successfully cleaned Docker build cache.")
     except docker.errors.APIError as api_error:
-        logger.error("Failed to prune build cache: %s", api_error)
+        logger.error("Failed to clean Docker build cache: %s", api_error)
+        raise
 
-    # Remove local folders
-    try:
-        subprocess.run(["sudo", "rm", "-rf", "certificates", "assets"], check=True)
-    except subprocess.CalledProcessError as called_process_error:
-        logger.error("Failed to remove local folders: %s", called_process_error)
+
+def clean_local_folders(folders=None):
+    """
+    Remove specified local folders.
+
+    Parameters:
+    folders (list): List of folder paths to remove.
+
+    Returns:
+    None
+    """
+    for folder in folders:
+        try:
+            # Using subprocess to delete folder with sudo permissions
+            subprocess.run(["sudo", "rm", "-rf", folder], check=True)
+            logger.info("Successfully removed %s.", folder)
+        except Exception as error:
+            logger.error("Failed to remove %s: %s", folder, error)
+            raise
+
+
+def clean_docker_environment(filters=None, folders=None):
+    """
+    Clean the Docker environment.
+
+    Parameters:
+    filters (dict): Filters for image pruning. Defaults to {"dangling": True}.
+    folders (list): List of folder names to remove. 
+
+    Returns:
+    None
+    """
+    if filters is None:
+        filters = {"dangling": True}
+
+    logger.info("Starting cleaning environment...")
+
+    # Cleaning various Docker components and local folders
+    clean_docker_containers()
+    clean_docker_images(filters)
+    clean_docker_build_cache()
+    clean_local_folders(folders)
 
     logger.info("Done cleaning environment.")

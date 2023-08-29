@@ -28,7 +28,16 @@ def build_parser():
     """
     parser = argparse.ArgumentParser(description="Phishing infrastructure deployment made easy.")
     parser.add_argument("--version", action="version", version="just-go-phishing 0.2.0", help="Show the version number and exit")
-    parser.add_argument("--clean", action="store_true", help="Clean the Docker environment")
+
+    subparsers = parser.add_subparsers(help='Sub-commands for cleaning the Docker environment', dest='sub_command')
+    
+    clean_parser = subparsers.add_parser('clean',description='The clean sub-command supports various options to clean Docker environment.')
+    clean_parser.add_argument('--containers', action='store_true', help='Clean Docker containers')
+    clean_parser.add_argument('--images', action='store_true', help='Clean Docker images')
+    clean_parser.add_argument('--build-cache', action='store_true', help='Clean Docker build cache')
+    clean_parser.add_argument('--local-folders', action='store_true', help='Clean local folders')
+    clean_parser.add_argument('--all', action='store_true', help='Clean entire Docker environment')
+
     parser.add_argument("--generate-certs", action="store_true", help="Generate SSL certificates")
     parser.add_argument("--build", choices=['build', 'app'], help="Build a GoPhish Docker image. Targets: 'build' or 'app'")
     parser.add_argument("--run", action="store_true", help="Run the GoPhish Docker container")

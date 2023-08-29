@@ -191,8 +191,17 @@ if __name__ == "__main__":
     if not any(vars(args).values()):
         parser.print_help()
         sys.exit()
-    if args.clean:
-        utils.clean_docker_environment()
+    if args.sub_command == 'clean':
+        if args.containers:
+            utils.clean_docker_containers()
+        if args.images:
+            utils.clean_docker_images()
+        if args.build_cache:
+            utils.clean_docker_build_cache()
+        if args.local_folders:
+            utils.clean_local_folders(folders = ["certificates", "assets"])
+        if args.all:
+            utils.clean_docker_environment(filters = {"dangling": True}, folders = ["certificates", "assets"])
     if args.generate_certs:
         generate_certificates()
     if args.build:
