@@ -25,7 +25,6 @@ from src import gophish
 
 DOMAIN = "domain.com"
 EMAIL_ADDRESS = "no-reply@{}".format(DOMAIN)
-CERTIFICATE_PATH = "certificates"
 
 logger = log.configure_logging()
 
@@ -39,25 +38,34 @@ def main():
     utils.initialise()
 
 
-@main.command('clean')
+@main.command('clean', context_settings={"ignore_unknown_options": True})
 @click.option('--containers', is_flag=True, help='Purge all Docker containers.')
-@click.option('--images', is_flag=True, help='Remove all Docker images not in use.')
+@click.option('--images', is_flag=True, help='Remove all Docker images not in use. Use --force to remove all images.')
 @click.option('--cache', is_flag=True, help='Flush Docker build cache.')
 @click.option('--volumes', is_flag=True, help='Clean specified local directories (certificates, assets).')
-@click.option('--all', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders.')
-def clean(containers, images, cache, volumes, all):
+@click.option('--all', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
+@click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --all.')
+@click.pass_context
+def clean(ctx, containers, images, cache, volumes, all, force):
     """Resource cleanup utilities."""
+    if not any([containers, images, cache, volumes, all]):
+        click.echo("No options selected. Showing help:")
+        click.echo(ctx.get_help())
+        return
     try:
+        # Initialize filter for images
+        img_filter = {"dangling": True} if not force else {"dangling": False}
         if containers:
             utils.clean_docker_containers()
         if images:
-            utils.clean_docker_images(filters={"dangling": True})
+            utils.clean_docker_images(filters=img_filter)
         if cache:
             utils.clean_docker_build_cache()
         if volumes:
             utils.clean_local_folders(folders=["certificates", "assets"])
         if all:
-            utils.clean_docker_environment(filters={"dangling": True}, folders=["certificates", "assets"])
+            # Include force option for full cleanup
+            utils.clean_docker_environment(filters=img_filter, folders=["certificates", "assets"])
     except Exception as exception:
         logger.error("Cleanup operation failed: {}".format(exception))
 
@@ -100,12 +108,12 @@ def run(ctx, container, all):
     """Deploy Docker containers."""
     try:
         if all:
-            lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
+            lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, "certificates")
             gophish.run_gophish_container(DOMAIN, EMAIL_ADDRESS)
             return
 
         if container == 'lego':
-            lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
+            lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, "certificates")
         elif container == 'gophish':
             gophish.run_gophish_container(DOMAIN, EMAIL_ADDRESS)
         else:
