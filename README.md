@@ -7,5 +7,6 @@ To use, update `DOMAIN` and `EMAIL_ADDRESS` in `main.py`. Install the required d
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -r requirements.txt
-$ python main.py
+$ python main.py build --all
+$ python main.py run --all
 ```

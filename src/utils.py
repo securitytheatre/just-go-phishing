@@ -248,6 +248,7 @@ def clean_docker_environment(filters=None, folders=None):
     logger.info("Done cleaning environment.")
 
 
+# TODO: Assess if required in the future
 def change_volume_ownership(path: Path, uid: int, gid: int) -> bool:
     """
     Change the ownership of all files in the given path to the specified UID and GID.
@@ -276,6 +277,7 @@ def change_volume_ownership(path: Path, uid: int, gid: int) -> bool:
         return False
 
 
+# TODO: Assess if required in the future
 def remove_local_folders(folders: list[Path]):
     """
     Remove local directories specified in the 'folders' list.
