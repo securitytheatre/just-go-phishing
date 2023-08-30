@@ -17,10 +17,8 @@ You should have received a copy of the GNU Affero General Public License along w
 If not, see <https://www.gnu.org/licenses/>.
 """
 
-import sys
-
+import click
 from src import log
-from src import menu
 from src import utils
 from src import lego
 from src import gophish
@@ -29,36 +27,46 @@ DOMAIN = "domain.com"
 EMAIL_ADDRESS = f"no-reply@{DOMAIN}"
 CERTIFICATE_PATH = "certificates"
 
-
-if __name__ == "__main__":
+@click.group()
+@click.version_option(version="just-go-phishing 0.2.0")
+def main():
+    """
+    Phishing infrastructure deployment made easy.
+    """
     logger = log.configure_logging()
     utils.initialise()
 
-    parser = menu.build_parser()
-    args = parser.parse_args()
+@main.command('clean')
+@click.option('--containers', is_flag=True, help='Clean Docker containers')
+@click.option('--images', is_flag=True, help='Clean Docker images')
+@click.option('--build-cache', is_flag=True, help='Clean Docker build cache')
+@click.option('--local-folders', is_flag=True, help='Clean local folders')
+@click.option('--all', is_flag=True, help='Clean entire Docker environment')
+def clean(containers, images, build_cache, local_folders, all):
+    if containers:
+        utils.clean_docker_containers()
+    if images:
+        utils.clean_docker_images(filters={"dangling": False})
+    if build_cache:
+        utils.clean_docker_build_cache()
+    if local_folders:
+        utils.clean_local_folders(folders=["certificates", "assets"])
+    if all:
+        utils.clean_docker_environment(filters={"dangling": False}, folders=["certificates", "assets"])
 
-    # Check if no arguments were provided
-    if not any(vars(args).values()):
-        parser.print_help()
-        sys.exit()
+@main.command('generate-certs')
+def generate_certs():
+    lego.pull_image()
+    lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
 
-    if args.sub_command == 'clean':
-        if args.containers:
-            utils.clean_docker_containers()
-        if args.images:
-            utils.clean_docker_images(filters = {"dangling": False})
-        if args.build_cache:
-            utils.clean_docker_build_cache()
-        if args.local_folders:
-            utils.clean_local_folders(folders = ["certificates", "assets"])
-        if args.all:
-            utils.clean_docker_environment(filters = {"dangling": False}, folders = ["certificates", "assets"])
+@main.command('build')
+@click.argument('target', type=click.Choice(['build', 'app']))
+def build(target):
+    gophish.build_gophish_image("docker/.", target)
 
-    if args.generate_certs:
-        lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, CERTIFICATE_PATH)
+@main.command('run')
+def run():
+    gophish.run_gophish_container(DOMAIN, EMAIL_ADDRESS)
 
-    if args.build:
-        gophish.build_gophish_image("docker/.", args.build)
-
-    if args.run:
-        gophish.run_gophish_container(DOMAIN, EMAIL_ADDRESS)
+if __name__ == "__main__":
+    main()
