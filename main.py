@@ -24,7 +24,7 @@ from src import lego
 from src import gophish
 
 DOMAIN = "domain.com"
-EMAIL_ADDRESS = "no-reply@{}".format(DOMAIN)
+EMAIL_ADDRESS = f"no-reply@{format(DOMAIN)}"
 
 logger = log.configure_logging()
 
@@ -46,7 +46,7 @@ def main():
 @click.option('--all', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
 @click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --all.')
 @click.pass_context
-def clean(ctx, containers, images, cache, volumes, all, force):
+def clean(ctx, containers, images, cache, volumes, purge, force):
     """Resource cleanup utilities."""
     if not any([containers, images, cache, volumes, all]):
         click.echo("No options selected. Showing help:")
@@ -63,11 +63,11 @@ def clean(ctx, containers, images, cache, volumes, all, force):
             utils.clean_docker_build_cache()
         if volumes:
             utils.clean_local_folders(folders=["certificates", "assets"])
-        if all:
+        if purge:
             # Include force option for full cleanup
             utils.clean_docker_environment(filters=img_filter, folders=["certificates", "assets"])
     except Exception as exception:
-        logger.error("Cleanup operation failed: {}".format(exception))
+        logger.error("Cleanup operation failed: %s", format(exception))
 
 
 @main.command('build', context_settings={"ignore_unknown_options": True})
@@ -97,7 +97,7 @@ def build(ctx, image, target, all):
             print('No options specified.')
             click.echo(ctx.get_help())
     except Exception as exception:
-        logger.error("Build failed: {}".format(exception))
+        logger.error("Build failed: %s", format(exception))
 
 
 @main.command('run', context_settings={"ignore_unknown_options": True})
@@ -120,7 +120,8 @@ def run(ctx, container, all):
             print('No options specified.')
             click.echo(ctx.get_help())
     except Exception as exception:
-        logger.error("Container deployment failed: {}".format(exception))
+        logger.error("Container deployment failed: %s", format(exception))
+
 
 if __name__ == "__main__":
     main()
