@@ -46,9 +46,9 @@ def main():
 @click.option('--complete', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
 @click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --complete.')
 @click.pass_context
-def clean(ctx, containers, images, cache, volumes, purge, force):
+def clean(ctx, containers, images, cache, volumes, complete, force):
     """Resource cleanup utilities."""
-    if not any([containers, images, cache, volumes, purge]):
+    if not any([containers, images, cache, volumes, complete]):
         click.echo("No options selected. Showing help:")
         click.echo(ctx.get_help())
         return
@@ -63,7 +63,7 @@ def clean(ctx, containers, images, cache, volumes, purge, force):
             utils.clean_docker_build_cache()
         if volumes:
             utils.clean_local_folders(folders=["certificates", "assets"])
-        if purge:
+        if complete:
             # Include force option for full cleanup
             utils.clean_docker_environment(filters=img_filter, folders=["certificates", "assets"])
     except Exception as exception:
