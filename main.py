@@ -43,12 +43,12 @@ def main():
 @click.option('--images', is_flag=True, help='Remove all Docker images not in use. Use --force to remove all images.')
 @click.option('--cache', is_flag=True, help='Flush Docker build cache.')
 @click.option('--volumes', is_flag=True, help='Clean specified local directories (certificates, assets).')
-@click.option('--all', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
-@click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --all.')
+@click.option('--complete', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
+@click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --complete.')
 @click.pass_context
 def clean(ctx, containers, images, cache, volumes, purge, force):
     """Resource cleanup utilities."""
-    if not any([containers, images, cache, volumes, all]):
+    if not any([containers, images, cache, volumes, purge]):
         click.echo("No options selected. Showing help:")
         click.echo(ctx.get_help())
         return
@@ -73,12 +73,12 @@ def clean(ctx, containers, images, cache, volumes, purge, force):
 @main.command('build', context_settings={"ignore_unknown_options": True})
 @click.option('--image', type=click.Choice(['lego', 'gophish']), help='Select either "lego" for Let\'s Encrypt or "gophish" for phishing server.')
 @click.option('--target', type=str, default='', help='Build target; defaults to building both "app" and "build" targets for GoPhish.')
-@click.option('--all', is_flag=True, help='Build both "lego" and "gophish" images.')
+@click.option('--complete', is_flag=True, help='Build both "lego" and "gophish" images.')
 @click.pass_context
-def build(ctx, image, target, all):
+def build(ctx, image, target, complete):
     """Compile Docker images."""
     try:
-        if all:
+        if complete:
             lego.pull_image()
             gophish.build_gophish_image("docker/.", "build")
             gophish.build_gophish_image("docker/.", "app")
@@ -102,12 +102,12 @@ def build(ctx, image, target, all):
 
 @main.command('run', context_settings={"ignore_unknown_options": True})
 @click.option('--container', type=click.Choice(['lego', 'gophish']), help='Run either "lego" for Let\'s Encrypt certificate deployment or "gophish" to launch phishing server.')
-@click.option('--all', is_flag=True, help='Run both "lego" and "gophish" containers.')
+@click.option('--complete', is_flag=True, help='Run both "lego" and "gophish" containers.')
 @click.pass_context
-def run(ctx, container, all):
+def run(ctx, container, complete):
     """Deploy Docker containers."""
     try:
-        if all:
+        if complete:
             lego.create_and_run_container(EMAIL_ADDRESS, DOMAIN, "certificates")
             gophish.run_gophish_container(DOMAIN, EMAIL_ADDRESS)
             return
