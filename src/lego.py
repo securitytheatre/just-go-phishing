@@ -26,10 +26,7 @@ from src import utils
 logger = log.configure_logging()
 
 
-# Default image to be used for the lego container
-LEGO_IMAGE = "goacme/lego:latest"
-
-def pull_image(image=LEGO_IMAGE):
+def pull_image(image: str):
     """
     Pulls a specific Docker image.
     

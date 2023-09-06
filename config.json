@@ -6,7 +6,7 @@
     "build": {
         "lego": {
             "path": "",
-            "tag": ""
+            "tag": "goacme/lego:latest"
         },
         "gophish": {
             "path": "docker/gophish/.",

@@ -42,8 +42,8 @@ def main():
 @click.option('--containers', is_flag=True, help='Purge all Docker containers.')
 @click.option('--images', is_flag=True, help='Remove all Docker images not in use. Use --force to remove all images.')
 @click.option('--cache', is_flag=True, help='Flush Docker build cache.')
-@click.option('--volumes', is_flag=True, help='Clean specified local directories (certificates, assets).')
-@click.option('--complete', is_flag=True, help='Full cleanup: Purge Docker environment and specified local folders. Use --force to remove all images.')
+@click.option('--volumes', is_flag=True, help='Clean specified local directories.')
+@click.option('--complete', is_flag=True, help='Full cleanup: Purge Docker environment and local volume. Use --force to remove all images.')
 @click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --complete.')
 @click.pass_context
 def clean(ctx, containers, images, cache, volumes, complete, force):
@@ -87,47 +87,28 @@ def clean(ctx, containers, images, cache, volumes, complete, force):
 
 
 @main.command('build', context_settings={"ignore_unknown_options": True})
-@click.option('--image', type=click.Choice(['lego', 'gophish']), help='Select either "lego" for Let\'s Encrypt or "gophish" for phishing server.')
-@click.option('--target', type=str, default='', help='Build target; defaults to building both "app" and "build" targets for GoPhish.')
+@click.option('--image', type=click.Choice(['lego', 'gophish']), help='Select either "lego" or "gophish"')
 @click.option('--complete', is_flag=True, help='Build both "lego" and "gophish" images.')
 @click.pass_context
-def build(ctx, image, target, complete):
+def build(ctx, image, complete):
     """Compile Docker images."""
     try:
         config_data = utils.read_json_config(CONFIG_FILE)
-        required_keys = ["build"]
-        is_valid = utils.validate_config_keys(config_data, required_keys)
-
-        if not is_valid:
-            raise ValueError("Invalid configuration: Missing required keys in the config file")
-
-        # General keys
-        #volume_path = config_data.get("volume_path")
-        #static_path = config_data.get("static_path")
-        #staging = config_data.get("staging")
-        #verbosity = config_data.get("verbosity")
 
         # Build keys
-        #build_lego_path = config_data.get("build", {}).get("lego", {}).get("path")
-        #build_lego_tag = config_data.get("build", {}).get("lego", {}).get("tag")
+        build_lego_tag = config_data.get("build", {}).get("lego", {}).get("tag")
         build_gophish_path = config_data.get("build", {}).get("gophish", {}).get("path")
-        #build_gophish_tag = config_data.get("build", {}).get("gophish", {}).get("tag")
+        build_gophish_tag = config_data.get("build", {}).get("gophish", {}).get("tag")
 
         if complete:
-            lego.pull_image()
-            gophish.build_gophish_image(build_gophish_path, "build")
-            gophish.build_gophish_image(build_gophish_path, "app")
+            lego.pull_image(build_lego_tag)
+            gophish.build_gophish_image(build_gophish_path, build_gophish_tag)
             return
 
         if image == 'lego':
-            lego.pull_image()
+            lego.pull_image(build_lego_tag)
         elif image == 'gophish':
-            if not target:
-                logger.info('No target specified. Defaulting to build both "app" and "build" targets.')
-                gophish.build_gophish_image(build_gophish_path, "build")
-                gophish.build_gophish_image(build_gophish_path, "app")
-            else:
-                gophish.build_gophish_image(build_gophish_path, target)
+            gophish.build_gophish_image(build_gophish_path, build_gophish_tag)
         else:
             print('No options specified.')
             click.echo(ctx.get_help())
@@ -135,8 +116,6 @@ def build(ctx, image, target, complete):
         logger.error("Configuration file not found: %s", CONFIG_FILE)
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON from configuration file: %s", CONFIG_FILE)
-    except ValueError as value_error:
-        logger.error(value_error)
     except Exception as exception:
         logger.error("Build failed: %s", format(exception))
 
