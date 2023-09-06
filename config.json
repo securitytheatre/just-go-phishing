@@ -6,22 +6,22 @@
     "build": {
         "lego": {
             "path": "",
-            "tag": "goacme/lego:latest"
+            "image_tag": "goacme/lego:latest"
         },
         "gophish": {
             "path": "docker/gophish/.",
-            "tag": "just-go-phishing/gophish:latest"
+            "image_tag": "just-go-phishing/gophish:latest"
         }
     },
     "run": {
         "lego": {
-            "tag": "goacme/lego:latest",
+            "image_tag": "goacme/lego:latest",
             "volume_path": "volume/lego",
             "domain": "example.com",
             "email": "no-reply@example.com"
         },
         "gophish": {
-            "tag": "just-go-phishing/gophish:latest",
+            "image_tag": "just-go-phishing/gophish:latest",
             "volume_path": "volume/gophish",
             "domain": "example.com",
             "email": "no-reply@example.com"

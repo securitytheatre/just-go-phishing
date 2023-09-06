@@ -96,19 +96,19 @@ def build(ctx, image, complete):
         config_data = utils.read_json_config(CONFIG_FILE)
 
         # Build keys
-        build_lego_tag = config_data.get("build", {}).get("lego", {}).get("tag")
+        build_lego_image_tag = config_data.get("build", {}).get("lego", {}).get("image_tag")
         build_gophish_path = config_data.get("build", {}).get("gophish", {}).get("path")
-        build_gophish_tag = config_data.get("build", {}).get("gophish", {}).get("tag")
+        build_gophish_image_tag = config_data.get("build", {}).get("gophish", {}).get("image_tag")
 
         if complete:
-            lego.pull_image(build_lego_tag)
-            gophish.build_gophish_image(build_gophish_path, build_gophish_tag)
+            lego.pull_image(build_lego_image_tag)
+            gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
             return
 
         if image == 'lego':
-            lego.pull_image(build_lego_tag)
+            lego.pull_image(build_lego_image_tag)
         elif image == 'gophish':
-            gophish.build_gophish_image(build_gophish_path, build_gophish_tag)
+            gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
         else:
             print('No options specified.')
             click.echo(ctx.get_help())
@@ -141,12 +141,12 @@ def run(ctx, container, complete):
         #verbosity = config_data.get("verbosity")
 
         # Run keys
-        #run_lego_tag = config_data.get("run", {}).get("lego", {}).get("tag")
+        #run_lego_image_tag = config_data.get("run", {}).get("lego", {}).get("image_tag")
         run_lego_volume_path = config_data.get("run", {}).get("lego", {}).get("volume_path")
         run_lego_domain = config_data.get("run", {}).get("lego", {}).get("domain")
         run_lego_email = config_data.get("run", {}).get("lego", {}).get("email")
 
-        #run_gophish_tag = config_data.get("run", {}).get("gophish", {}).get("tag")
+        #run_gophish_image_tag = config_data.get("run", {}).get("gophish", {}).get("image_tag")
         #run_gophish_volume_path = config_data.get("run", {}).get("gophish", {}).get("volume_path")
         run_gophish_domain = config_data.get("run", {}).get("gophish", {}).get("domain")
         run_gophish_email = config_data.get("run", {}).get("gophish", {}).get("email")
