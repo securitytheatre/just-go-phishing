@@ -22,13 +22,56 @@ import errno
 import shutil
 import subprocess
 import sys
+import json
 from pathlib import Path
-from typing import Tuple, Iterable
-from typing import Optional
+from typing import Tuple, Iterable, Optional, Dict, Union
 import docker
 from src import log
 
 logger = log.configure_logging()
+
+
+def read_json_config(file_path: Path) -> Dict[str, Union[str, Dict]]:
+    """
+    Read a JSON configuration file and return it as a Python dictionary.
+    
+    Args:
+        file_path (Path): The path to the JSON file
+
+    Returns:
+        Dict[str, Union[str, Dict]]: A dictionary containing the JSON configuration data
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            config_data = json.load(file)
+        return config_data
+    except FileNotFoundError:
+        logger.error("File not found.")
+        return {}
+    except json.JSONDecodeError:
+        logger.error("Error decoding JSON.")
+        return {}
+
+
+def validate_config_keys(config, required_keys):
+    """ 
+    Validate if all required keys are present in the given config.
+    
+    Parameters:
+    - config: dict
+        Configuration dictionary.
+    - required_keys: list
+        List of keys to check.
+    
+    Returns:
+    - int
+        Returns an error code. Zero means all keys are present.
+    """
+    for key in required_keys:
+        if key not in config:
+            logger.error("Missing key in configuration: %s", key)
+            return False
+    return True
 
 
 def read_requirements_txt(file_path: Path) -> Tuple[str]:

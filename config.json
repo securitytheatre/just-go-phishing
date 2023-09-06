@@ -1,0 +1,30 @@
+{
+    "volume_path": "volume",
+    "static_path": "static",
+    "staging": "true",
+    "verbosity": "INFO",
+    "build": {
+        "lego": {
+            "path": "",
+            "tag": ""
+        },
+        "gophish": {
+            "path": "docker/gophish/.",
+            "tag": "just-go-phishing/gophish:latest"
+        }
+    },
+    "run": {
+        "lego": {
+            "tag": "goacme/lego:latest",
+            "volume_path": "volume/lego",
+            "domain": "example.com",
+            "email": "no-reply@example.com"
+        },
+        "gophish": {
+            "tag": "just-go-phishing/gophish:latest",
+            "volume_path": "volume/gophish",
+            "domain": "example.com",
+            "email": "no-reply@example.com"
+        }
+    }
+}
