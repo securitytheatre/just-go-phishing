@@ -28,7 +28,44 @@ from typing import Tuple, Iterable, Optional, Dict, Union
 import docker
 from src import log
 
+CONFIG_FILE = os.path.join(os.getcwd(), "config.json")
 logger = log.configure_logging()
+
+
+def handle_exceptions(func):
+    """Decorator function for centralized error handling."""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except FileNotFoundError:
+            logger.error("Configuration file not found: %s", CONFIG_FILE)
+        except json.JSONDecodeError:
+            logger.error("Failed to decode JSON from configuration file: %s", CONFIG_FILE)
+        except ValueError as value_error:
+            logger.error(value_error)
+        except Exception as exception:
+            logger.error("Operation failed: %s", format(exception))
+
+    return wrapper
+
+
+def handle_build_error(error: docker.errors.BuildError) -> None:
+    """Handles BuildError exceptions during Docker image building."""
+    logger.error("Error building Docker image: %s", error)
+
+
+def handle_api_error(error: docker.errors.APIError) -> None:
+    """Handles APIError exceptions during Docker container running."""
+    logger.error("Error running GoPhish container: %s", error)
+
+
+def get_config_value(config, *keys, default=None):
+    """Retrieve nested configuration value using the provided keys."""
+    for key in keys:
+        config = config.get(key)
+        if config is None:
+            return default
+    return config
 
 
 def read_json_config(file_path: Path) -> Dict[str, Union[str, Dict]]:

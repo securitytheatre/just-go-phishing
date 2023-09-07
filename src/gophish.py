@@ -26,83 +26,83 @@ from src import utils
 logger = log.configure_logging()
 
 
-def build_gophish_image(path: str, tag: str):
+def build_gophish_image(path: str, tag: str) -> None:
     """
     Build a Docker image using the specified Dockerfile and target
     Args:
-        PATH (str): The path to the Dockerfile
-        TARGET (str): The target to build
+        path (str): The path to the Dockerfile
+        tag (str): The target to build
     """
     client = utils.get_docker_client()
 
     logger.info("Building Docker image with Dockerfile %s...", path)
     try:
-        image, _ = client.images.build(
-            path=path,
-            rm=True,
-            tag=tag
-        )
+        image, _ = client.images.build(path=path, rm=True, tag=tag)
         logger.info("Successfully built image: %s", image.tags[0])
     except docker.errors.BuildError as error:
-        logger.error("Error building Docker image: %s", error)
+        utils.handle_build_error(error)
 
-def run_gophish_container(domain, email):
+
+def run_gophish_container(domain: str, email: str, run_lego_volume_path: str, run_gophish_volume_path: str, tag: str) -> None:
     """
     Run the GoPhish Docker container
+    Args:
+        domain (str): The domain for which the container is being configured
+        email (str): The contact email address
     """
     client = utils.get_docker_client()
+    environment = create_environment_variables(domain, email)
+    volumes = create_volumes(run_lego_volume_path, run_gophish_volume_path)
+    ports = create_ports()
 
-    # Set variables for GoPhish container
-    admin_listen_url = "0.0.0.0:3333"
-    admin_use_tls = "true"
-    admin_cert_path = f"/certificates/certificates/{domain}.crt"
-    admin_key_path = f"/certificates/certificates/{domain}.key"
-    admin_trusted_origins = ""
-    phish_listen_url = ""
-    phish_use_tls = "true"
-    phish_cert_path = f"/certificates/certificates/{domain}.crt"
-    phish_key_path = f"/certificates/certificates/{domain}.key"
-    contact_address = email
-    db_file_path = "/opt/gophish/assets/gophish.db"
-
-    environment = {
-        "ADMIN_LISTEN_URL": admin_listen_url,
-        "ADMIN_USE_TLS": admin_use_tls,
-        "ADMIN_CERT_PATH": admin_cert_path,
-        "ADMIN_KEY_PATH": admin_key_path,
-        "ADMIN_TRUSTED_ORIGINS": admin_trusted_origins,
-        "PHISH_LISTEN_URL": phish_listen_url,
-        "PHISH_USE_TLS": phish_use_tls,
-        "PHISH_CERT_PATH": phish_cert_path,
-        "PHISH_KEY_PATH": phish_key_path,
-        "CONTACT_ADDRESS": contact_address,
-        "DB_FILE_PATH": db_file_path
-    }
-
-    # Run the GoPhish Docker container with the specified environment variables
-    volumes = {
-        os.path.join(os.getcwd(), "certificates"): {'bind': '/certificates', 'mode': 'rw'},
-        os.path.join(os.getcwd(), "assets"): {'bind': '/opt/gophish/assets', 'mode': 'rw'}
-    }
-    ports = {
-        "80": 80,
-        "443": 443,
-        "8080": 9080,
-        "8443": 9443,
-        "3333": 3333
-    }
     try:
         container = client.containers.run(
-            f"{os.getenv('USER')}/gophish-app",
+            tag,
             detach=True,
-            restart_policy={
-                "Name": "on-failure",
-                "MaximumRetryCount": 5
-            },
+            restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},
             volumes=volumes,
             ports=ports,
             environment=environment
         )
         container.logs()
     except docker.errors.APIError as error:
-        logger.error("Error running GoPhish container: %s", error)
+        utils.handle_api_error(error)
+
+
+def create_environment_variables(domain: str, email: str) -> dict:
+    """Creates a dictionary of environment variables to be used in the Docker container."""
+    admin_cert_path = f"/certificates/certificates/{domain}.crt"
+    admin_key_path = f"/certificates/certificates/{domain}.key"
+
+    return {
+        "ADMIN_LISTEN_URL": "0.0.0.0:3333",
+        "ADMIN_USE_TLS": "true",
+        "ADMIN_CERT_PATH": admin_cert_path,
+        "ADMIN_KEY_PATH": admin_key_path,
+        "ADMIN_TRUSTED_ORIGINS": "",
+        "PHISH_LISTEN_URL": "",
+        "PHISH_USE_TLS": "true",
+        "PHISH_CERT_PATH": admin_cert_path,
+        "PHISH_KEY_PATH": admin_key_path,
+        "CONTACT_ADDRESS": email,
+        "DB_FILE_PATH": "/opt/gophish/assets/gophish.db"
+    }
+
+
+def create_volumes(run_lego_volume_path: str, run_gophish_volume_path: str) -> dict:
+    """Creates a dictionary of volumes to be used in the Docker container."""
+    return {
+        os.path.join(os.getcwd(), run_lego_volume_path): {'bind': '/certificates', 'mode': 'rw'},
+        os.path.join(os.getcwd(), run_gophish_volume_path): {'bind': '/opt/gophish/assets', 'mode': 'rw'}
+    }
+
+
+def create_ports() -> dict:
+    """Creates a dictionary of ports to be used in the Docker container."""
+    return {
+        "80": 80,
+        "443": 443,
+        "8080": 9080,
+        "8443": 9443,
+        "3333": 3333
+    }

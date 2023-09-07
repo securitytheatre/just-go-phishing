@@ -18,7 +18,6 @@ If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-import json
 import click
 from src import log
 from src import utils
@@ -46,131 +45,92 @@ def main():
 @click.option('--complete', is_flag=True, help='Full cleanup: Purge Docker environment and local volume. Use --force to remove all images.')
 @click.option('--force', is_flag=True, help='Force removal of all Docker images. Applicable with --images and --complete.')
 @click.pass_context
+@utils.handle_exceptions
 def clean(ctx, containers, images, cache, volumes, complete, force):
     """Resource cleanup utilities."""
     if not any([containers, images, cache, volumes, complete]):
         click.echo("No options selected. Showing help:")
         click.echo(ctx.get_help())
         return
-    try:
-        config = utils.read_json_config(CONFIG_FILE)
-        required_keys = ["volume_path", "static_path"]
-        is_valid = utils.validate_config_keys(config, required_keys)
 
-        if not is_valid:
-            raise ValueError("Invalid configuration: Missing required keys")
+    config_data = utils.read_json_config(CONFIG_FILE)
 
-        volume_path = config.get("volume_path")
-        static_path = config.get("static_path")
+    volume_path = utils.get_config_value(config_data, "volume_path")
+    static_path = utils.get_config_value(config_data, "static_path")
 
-        # Initialize filter for images
-        img_filter = {"dangling": True} if not force else {"dangling": False}
-        if containers:
-            utils.clean_docker_containers()
-        if images:
-            utils.clean_docker_images(filters=img_filter)
-        if cache:
-            utils.clean_docker_build_cache()
-        if volumes:
-            utils.clean_local_folders(folders=[volume_path, static_path])
-        if complete:
-            # Include force option for full cleanup
-            utils.clean_docker_environment(filters=img_filter, folders=[volume_path, static_path])
-    except FileNotFoundError:
-        logger.error("Configuration file not found: %s", CONFIG_FILE)
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from configuration file: %s", CONFIG_FILE)
-    except ValueError as value_error:
-        logger.error(value_error)
-    except Exception as exception:
-        logger.error("Cleanup operation failed: %s", format(exception))
+    # Initialize filter for images
+    img_filter = {"dangling": True} if not force else {"dangling": False}
+    if containers:
+        utils.clean_docker_containers()
+    if images:
+        utils.clean_docker_images(filters=img_filter)
+    if cache:
+        utils.clean_docker_build_cache()
+    if volumes:
+        utils.clean_local_folders(folders=[volume_path, static_path])
+    if complete:
+        # Include force option for full cleanup
+        utils.clean_docker_environment(filters=img_filter, folders=[volume_path, static_path])
 
 
 @main.command('build', context_settings={"ignore_unknown_options": True})
 @click.option('--image', type=click.Choice(['lego', 'gophish']), help='Select either "lego" or "gophish"')
 @click.option('--complete', is_flag=True, help='Build both "lego" and "gophish" images.')
 @click.pass_context
+@utils.handle_exceptions
 def build(ctx, image, complete):
     """Compile Docker images."""
-    try:
-        config_data = utils.read_json_config(CONFIG_FILE)
+    config_data = utils.read_json_config(CONFIG_FILE)
 
-        # Build keys
-        build_lego_image_tag = config_data.get("build", {}).get("lego", {}).get("image_tag")
-        build_gophish_path = config_data.get("build", {}).get("gophish", {}).get("path")
-        build_gophish_image_tag = config_data.get("build", {}).get("gophish", {}).get("image_tag")
+    build_lego_image_tag = utils.get_config_value(config_data, "build", "lego", "image_tag")
+    build_gophish_path = utils.get_config_value(config_data, "build", "gophish", "path")
+    build_gophish_image_tag = utils.get_config_value(config_data, "build", "gophish", "image_tag")
 
-        if complete:
-            lego.pull_image(build_lego_image_tag)
-            gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
-            return
+    if complete:
+        lego.pull_image(build_lego_image_tag)
+        gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
+        return
 
-        if image == 'lego':
-            lego.pull_image(build_lego_image_tag)
-        elif image == 'gophish':
-            gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
-        else:
-            print('No options specified.')
-            click.echo(ctx.get_help())
-    except FileNotFoundError:
-        logger.error("Configuration file not found: %s", CONFIG_FILE)
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from configuration file: %s", CONFIG_FILE)
-    except Exception as exception:
-        logger.error("Build failed: %s", format(exception))
+    if image == 'lego':
+        lego.pull_image(build_lego_image_tag)
+    elif image == 'gophish':
+        gophish.build_gophish_image(build_gophish_path, build_gophish_image_tag)
+    else:
+        print('No options specified.')
+        click.echo(ctx.get_help())
 
 
 @main.command('run', context_settings={"ignore_unknown_options": True})
 @click.option('--container', type=click.Choice(['lego', 'gophish']), help='Run either "lego" for Let\'s Encrypt certificate deployment or "gophish" to launch phishing server.')
 @click.option('--complete', is_flag=True, help='Run both "lego" and "gophish" containers.')
 @click.pass_context
+@utils.handle_exceptions
 def run(ctx, container, complete):
     """Deploy Docker containers."""
-    try:
-        config_data = utils.read_json_config(CONFIG_FILE)
-        required_keys = ["run"]
-        is_valid = utils.validate_config_keys(config_data, required_keys)
+    config_data = utils.read_json_config(CONFIG_FILE)
 
-        if not is_valid:
-            raise ValueError("Invalid configuration: Missing required keys in the config file")
+    run_lego_image_tag = utils.get_config_value(config_data, "run", "lego", "image_tag")
+    run_lego_volume_path = utils.get_config_value(config_data, "run", "lego", "volume_path")
+    run_lego_domain = utils.get_config_value(config_data, "run", "lego", "domain")
+    run_lego_email = utils.get_config_value(config_data, "run", "lego", "email")
 
-        # General keys
-        #volume_path = config_data.get("volume_path")
-        #static_path = config_data.get("static_path")
-        #staging = config_data.get("staging")
-        #verbosity = config_data.get("verbosity")
+    run_gophish_image_tag = utils.get_config_value(config_data, "run", "gophish", "image_tag")
+    run_gophish_volume_path = utils.get_config_value(config_data, "run", "gophish", "volume_path")
+    run_gophish_domain = utils.get_config_value(config_data, "run", "gophish", "domain")
+    run_gophish_email = utils.get_config_value(config_data, "run", "gophish", "email")
 
-        # Run keys
-        #run_lego_image_tag = config_data.get("run", {}).get("lego", {}).get("image_tag")
-        run_lego_volume_path = config_data.get("run", {}).get("lego", {}).get("volume_path")
-        run_lego_domain = config_data.get("run", {}).get("lego", {}).get("domain")
-        run_lego_email = config_data.get("run", {}).get("lego", {}).get("email")
+    if complete:
+        lego.create_and_run_container(run_lego_image_tag, run_lego_email, run_lego_domain, run_lego_volume_path)
+        gophish.run_gophish_container(run_gophish_domain, run_gophish_email, run_lego_volume_path, run_gophish_volume_path, run_gophish_image_tag)
+        return
 
-        #run_gophish_image_tag = config_data.get("run", {}).get("gophish", {}).get("image_tag")
-        #run_gophish_volume_path = config_data.get("run", {}).get("gophish", {}).get("volume_path")
-        run_gophish_domain = config_data.get("run", {}).get("gophish", {}).get("domain")
-        run_gophish_email = config_data.get("run", {}).get("gophish", {}).get("email")
-
-        if complete:
-            lego.create_and_run_container(run_lego_email, run_lego_domain, run_lego_volume_path)
-            gophish.run_gophish_container(run_gophish_domain, run_gophish_email)
-            return
-
-        if container == 'lego':
-            lego.create_and_run_container(run_lego_email, run_lego_domain, run_lego_volume_path)
-        elif container == 'gophish':
-            gophish.run_gophish_container(run_gophish_domain, run_gophish_email)
-        else:
-            print('No options specified.')
-            click.echo(ctx.get_help())
-    except FileNotFoundError:
-        logger.error("Configuration file not found: %s", CONFIG_FILE)
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from configuration file: %s", CONFIG_FILE)
-    except ValueError as value_error:
-        logger.error(value_error)
-    except Exception as exception:
-        logger.error("Container deployment failed: %s", format(exception))
+    if container == 'lego':
+        lego.create_and_run_container(run_lego_image_tag, run_lego_email, run_lego_domain, run_lego_volume_path)
+    elif container == 'gophish':
+        gophish.run_gophish_container(run_gophish_domain, run_gophish_email, run_lego_volume_path, run_gophish_volume_path, run_gophish_image_tag)
+    else:
+        print('No options specified.')
+        click.echo(ctx.get_help())
 
 
 if __name__ == "__main__":

@@ -26,17 +26,15 @@ from src import utils
 logger = log.configure_logging()
 
 
-def pull_image(image: str):
+def pull_image(image: str) -> bool:
     """
     Pulls a specific Docker image.
     
-    Parameters:
-    - image : str, optional
-        The Docker image to pull. Defaults to LEGO_IMAGE.
+    Args:
+        image (str): The Docker image to pull.
     
     Returns:
-    - bool
-        True if successful, False otherwise.
+        bool: True if successful, False otherwise.
     """
     client = utils.get_docker_client()
 
@@ -44,47 +42,30 @@ def pull_image(image: str):
     try:
         client.images.pull(image)
     except docker.errors.APIError as error:
-        logger.error("Error pulling image: %s", error)
-        return False
+        utils.handle_api_error(error)
     return True
 
-def create_and_run_container(email, domain, path):
+
+def create_and_run_container(image: str, email: str, domain: str, path: str) -> bool:
     """
     Creates and runs a Docker container using the lego image to generate SSL certificates.
     
-    Parameters:
-    - email : str
-        Email address for certificate registration.
-    - domain : str
-        The domain for which to generate the certificate.
-    - path : str
-        The path where the certificate will be stored.
+    Args:
+        email (str): Email address for certificate registration.
+        domain (str): The domain for which to generate the certificate.
+        path (str): The path where the certificate will be stored.
     
     Returns:
-    - bool
-        True if the operation is successful, False otherwise.
+        bool: True if the operation is successful, False otherwise.
     """
     client = utils.get_docker_client()
 
     try:
         container = client.containers.create(
-            image=LEGO_IMAGE,
-            command=[
-                f"--email={email}",
-                f"--domains={domain}",
-                "--path=/certificates",
-                "--accept-tos",
-                "--http",
-                "--tls",
-                "run"
-            ],
-            volumes={
-                os.path.join(os.getcwd(), path): {'bind': '/certificates', 'mode': 'rw'},
-            },
-            ports={
-                "80/tcp": 80,
-                "443/tcp": 443,
-            },
+            image=image,
+            command=generate_command(email, domain),
+            volumes=create_volumes(path),
+            ports=create_ports(),
         )
 
         container.start()
@@ -93,5 +74,32 @@ def create_and_run_container(email, domain, path):
         logger.info("Done running lego container.")
         return True
     except docker.errors.APIError as error:
-        logger.error("Error running lego container: %s", error)
-        return False
+        utils.handle_api_error(error)
+
+
+def generate_command(email: str, domain: str) -> list:
+    """Generate the command list for the Docker container."""
+    return [
+        f"--email={email}",
+        f"--domains={domain}",
+        "--path=/certificates",
+        "--accept-tos",
+        "--http",
+        "--tls",
+        "run"
+    ]
+
+
+def create_volumes(path: str) -> dict:
+    """Creates a dictionary of volumes to be used in the Docker container."""
+    return {
+        os.path.join(os.getcwd(), path): {'bind': '/certificates', 'mode': 'rw'},
+    }
+
+
+def create_ports() -> dict:
+    """Creates a dictionary of ports to be used in the Docker container."""
+    return {
+        "80/tcp": 80,
+        "443/tcp": 443,
+    }
