@@ -16,6 +16,25 @@ $ source .venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
+Update the `domain` and `email` fields under both `lego` and `gophish` keys with the new values in the `run` section of `config.json`.
+
+```bash
+"run": {
+    "lego": {
+        ...
+        "domain": "newdomain.com",
+        "email": "newemail@domain.com"
+    },
+    "gophish": {
+        ...
+        "domain": "newdomain.com",
+        "email": "newemail@domain.com"
+    }
+}
+```
+
+Replace `newdomain.com` and `newemail@domain.com` with the domain and email address to be used for the phishing campaign.
+
 Run using the configuration specified in `config.json`:
 
 ```bash
