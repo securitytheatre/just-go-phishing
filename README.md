@@ -8,9 +8,7 @@ License: GNU Affero General Public License v3.0 or later
 `just-go-phishing` is a Python tool to simplify the setup of phishing infrastructure using Docker containers.
 
 ### Instructions
-[Install Docker for your operating system](https://docs.docker.com/engine/install/). `just-go-phishing` has been tested exclusively on Linux.
-
-Install dependencies with the following commands:
+[Install Docker for your operating system](https://docs.docker.com/engine/install/). Install dependencies with the following commands:
 
 ```bash
 $ python3 -m venv .venv
@@ -24,6 +22,8 @@ Run using the configuration specified in `config.json`:
 $ python main.py build --complete
 $ python main.py run --complete
 ```
+
+ `just-go-phishing` has been tested exclusively on Linux.
 
 ### Commands
 
