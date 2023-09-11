@@ -27,21 +27,8 @@ RUN apt-get update -yq \
 WORKDIR /
 RUN git clone https://github.com/gophish/gophish build
 
-# Stripping X-Gophish 
-RUN sed -i 's/X-Gophish-Contact/X-Contact/g' build/models/maillog.go
-RUN sed -i 's/X-Gophish-Contact/X-Contact/g' build/models/maillog_test.go
-RUN sed -i 's/X-Gophish-Contact/X-Contact/g' build/models/email_request.go
-RUN sed -i 's/X-Gophish-Contact/X-Contact/g' build/models/email_request_test.go
-# Stripping X-Gophish-Signature
-RUN sed -i 's/X-Gophish-Signature/X-Signature/g' build/webhook/webhook.go
-# Changing servername
-RUN sed -i 's/const ServerName = "gophish"/const ServerName = "Microsoft Outlook 16.0"/' build/config/config.go
-# Changing rid value
-RUN sed -i 's/const RecipientParameter = "rid"/const RecipientParameter = "SESSGUID"/g' build/models/campaign.go
-# Patch phish.go 404.html
-COPY "phish.go.patch" "/build/controllers/"
-RUN patch "/build/controllers/phish.go" < "/build/controllers/phish.go.patch"
-COPY "404.html" "/build/templates/"
+COPY "patch" "/patch"
+RUN ["bash", "/patch/patch.sh"]
 
 WORKDIR /build
 # Minify client-side assets

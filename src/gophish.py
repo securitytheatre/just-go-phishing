@@ -64,7 +64,7 @@ def run_gophish_container(domain: str, email: str, run_lego_volume_path: str, ru
             ports=ports,
             environment=environment
         )
-        container.logs()
+        logger.info("Done running GoPhish container.")
     except docker.errors.APIError as error:
         utils.handle_api_error(error)
 
